@@ -84,6 +84,14 @@
         (reviewer--edit-annotation existing)
       (reviewer--create-annotation))))
 
+(defun reviewer-clear-annotations ()
+  "Delete all annotations in the current buffer."
+  (interactive)
+  (let ((annotations (reviewer-all-annotations)))
+    (unless annotations
+      (user-error "No annotations in this buffer"))
+    (mapc #'delete-overlay annotations)))
+
 (defun reviewer--org-lang ()
   "Best-effort org src-block language tag for the current buffer.
 Derived by stripping \"-mode\" off `major-mode', which also happens to
