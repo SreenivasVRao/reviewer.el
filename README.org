@@ -1,0 +1,17 @@
+#+TITLE: reviewer.el
+
+A minor mode for annotating a file or a diff (~C-c C-a~ on a region or
+word, editable in place) without changing its content, then rendering
+those annotations as a plain org buffer -- file, line number(s), the
+quoted span, and the note -- instead of injecting comments into the
+source or exporting a hard-to-read diff.
+
+Built for handing local review notes to an agent (e.g. [[https://github.com/xenodium/agent-shell][agent-shell]]),
+not for submitting comments to a remote/forge. No persistence yet --
+annotations are session-local -- though the data is kept simple enough
+to serialize later if that's worth adding.
+
+* Status
+
+~reviewer-mode~ (create/edit annotations) is in place. The org renderer
+is not written yet.
