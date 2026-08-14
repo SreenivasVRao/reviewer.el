@@ -122,6 +122,7 @@ be exactly what org needs back to find that mode's font-lock table."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "n") #'reviewer-render-next-annotation)
     (define-key map (kbd "p") #'reviewer-render-previous-annotation)
+    (define-key map (kbd "q") #'quit-window)
     map)
   "Keymap for `reviewer-render-mode'.")
 
