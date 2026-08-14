@@ -27,6 +27,7 @@
 (require 'seq)
 (require 'subr-x)
 (require 'thingatpt)
+(require 'org)
 
 (defface reviewer-highlight-face
   '((t :inherit highlight))
@@ -83,9 +84,58 @@
         (reviewer--edit-annotation existing)
       (reviewer--create-annotation))))
 
+(defun reviewer--org-lang ()
+  "Best-effort org src-block language tag for the current buffer.
+Derived by stripping \"-mode\" off `major-mode', which also happens to
+be exactly what org needs back to find that mode's font-lock table."
+  (string-remove-suffix "-mode" (symbol-name major-mode)))
+
+(defun reviewer--line-range (overlay)
+  "Return \"Line N\" or \"Lines N-M\" for OVERLAY's line span."
+  (let ((start (line-number-at-pos (overlay-start overlay)))
+        (end   (line-number-at-pos (overlay-end overlay))))
+    (if (= start end)
+        (format "Line %d" start)
+      (format "Lines %d-%d" start end))))
+
+(defun reviewer--render-file (file)
+  "Return the /tmp/ path used to persist FILE's rendered review."
+  (expand-file-name (format "reviewer-%s.org" (file-name-base file))
+                    temporary-file-directory))
+
+(defun reviewer-render ()
+  "Render all annotations in the current buffer as an org file in /tmp/."
+  (interactive)
+  (let ((annotations (reviewer-all-annotations)))
+    (unless annotations
+      (user-error "No annotations in this buffer"))
+    ;; Overlay positions only mean something in this buffer, so resolve
+    ;; everything derived from them here, before switching to OUT below.
+    (let* ((file    (or (buffer-file-name) (buffer-name)))
+           (lang    (reviewer--org-lang))
+           (entries (mapcar (lambda (ov)
+                              (list :range (reviewer--line-range ov)
+                                    :text  (buffer-substring-no-properties
+                                            (overlay-start ov) (overlay-end ov))
+                                    :note  (reviewer-annotation-text ov)))
+                            annotations))
+           (out     (find-file-noselect (reviewer--render-file file))))
+      (with-current-buffer out
+        (erase-buffer)
+        (org-mode)
+        (insert "#+STARTUP: showall\n")
+        (insert (format "#+TITLE: Review: %s\n\n" file))
+        (dolist (entry entries)
+          (insert (format "* %s\n\n" (plist-get entry :range)))
+          (insert (format "#+BEGIN_SRC %s\n%s\n#+END_SRC\n\n" lang (plist-get entry :text)))
+          (insert (format "** Note\n\n%s\n\n" (plist-get entry :note))))
+        (save-buffer))
+      (pop-to-buffer out))))
+
 (defvar reviewer-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-a") #'reviewer-annotate)
+    (define-key map (kbd "C-c C-r") #'reviewer-render)
     map)
   "Keymap for `reviewer-mode'.")
 
