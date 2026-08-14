@@ -121,6 +121,7 @@ be exactly what org needs back to find that mode's font-lock table."
                             annotations))
            (out     (find-file-noselect (reviewer--render-file file))))
       (with-current-buffer out
+        (setq buffer-read-only nil)
         (erase-buffer)
         (org-mode)
         (insert "#+STARTUP: showall\n")
@@ -129,7 +130,8 @@ be exactly what org needs back to find that mode's font-lock table."
           (insert (format "* %s\n\n" (plist-get entry :range)))
           (insert (format "#+BEGIN_SRC %s\n%s\n#+END_SRC\n\n" lang (plist-get entry :text)))
           (insert (format "** Note\n\n%s\n\n" (plist-get entry :note))))
-        (save-buffer))
+        (save-buffer)
+        (setq buffer-read-only t))
       (pop-to-buffer out))))
 
 (defvar reviewer-mode-map
