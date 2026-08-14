@@ -103,6 +103,33 @@ be exactly what org needs back to find that mode's font-lock table."
   (expand-file-name (format "reviewer-%s.org" (file-name-base file))
                     temporary-file-directory))
 
+(defun reviewer-render-next-annotation ()
+  "Move point to the next annotation heading."
+  (interactive)
+  (end-of-line)
+  (unless (re-search-forward "^\\* " nil t)
+    (user-error "No next annotation"))
+  (beginning-of-line))
+
+(defun reviewer-render-previous-annotation ()
+  "Move point to the previous annotation heading."
+  (interactive)
+  (beginning-of-line)
+  (unless (re-search-backward "^\\* " nil t)
+    (user-error "No previous annotation")))
+
+(defvar reviewer-render-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "n") #'reviewer-render-next-annotation)
+    (define-key map (kbd "p") #'reviewer-render-previous-annotation)
+    map)
+  "Keymap for `reviewer-render-mode'.")
+
+(define-minor-mode reviewer-render-mode
+  "Minor mode for navigating a reviewer render buffer with `n'/`p'."
+  :lighter " Reviewer-Render"
+  :keymap reviewer-render-mode-map)
+
 (defun reviewer-render ()
   "Render all annotations in the current buffer as an org file in /tmp/."
   (interactive)
@@ -131,7 +158,8 @@ be exactly what org needs back to find that mode's font-lock table."
           (insert (format "#+BEGIN_SRC %s\n%s\n#+END_SRC\n\n" lang (plist-get entry :text)))
           (insert (format "** Note\n\n%s\n\n" (plist-get entry :note))))
         (save-buffer)
-        (setq buffer-read-only t))
+        (setq buffer-read-only t)
+        (reviewer-render-mode 1))
       (pop-to-buffer out))))
 
 (defvar reviewer-mode-map
