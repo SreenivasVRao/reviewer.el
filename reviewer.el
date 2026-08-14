@@ -174,7 +174,9 @@ be exactly what org needs back to find that mode's font-lock table."
 (define-minor-mode reviewer-mode
   "Minor mode for annotating a buffer without changing its content."
   :lighter " Reviewer"
-  :keymap reviewer-mode-map)
+  :keymap reviewer-mode-map
+  (dolist (ov (reviewer-all-annotations))
+    (overlay-put ov 'face (when reviewer-mode 'reviewer-highlight-face))))
 
 (provide 'reviewer)
 ;;; reviewer.el ends here
