@@ -11,7 +11,58 @@ not for submitting comments to a remote/forge. No persistence yet --
 annotations are session-local -- though the data is kept simple enough
 to serialize later if that's worth adding.
 
+* Usage
+
+- ~C-c C-a~ :: Annotate the active region (or word at point). On an
+  existing annotation, edit its note instead; clearing the text
+  deletes it.
+- ~C-c C-s~ :: Show the annotation at point in a posframe (author,
+  time, note), until the next command. Falls back to the echo area if
+  [[https://github.com/tumashu/posframe][posframe]] isn't installed.
+- ~C-c C-r~ :: Render all annotations in the buffer as an org file,
+  written next to the buffer. In the rendered buffer, ~n~/~p~ move
+  between annotations and ~q~ quits.
+- ~M-x reviewer-clear-annotations~ :: Delete all annotations in the
+  current buffer.
+
+~reviewer-global-mode~ turns ~reviewer-mode~ on in every buffer.
+
+* Installation
+
+** straight.el + use-package
+
+#+BEGIN_SRC emacs-lisp
+(use-package reviewer
+  :straight (reviewer :type git :host github :repo "SreenivasVRao/reviewer.el")
+  :hook (after-init . reviewer-global-mode))
+#+END_SRC
+
+For a local checkout instead of pulling from GitHub, use
+~:local-repo~:
+
+#+BEGIN_SRC emacs-lisp
+(use-package reviewer
+  :straight (reviewer :type git :local-repo "/path/to/reviewer.el")
+  :hook (after-init . reviewer-global-mode))
+#+END_SRC
+
+** Doom Emacs
+
+In =packages.el=:
+
+#+BEGIN_SRC emacs-lisp
+(package! reviewer
+  :recipe (:host github :repo "SreenivasVRao/reviewer.el"))
+#+END_SRC
+
+In =config.el=:
+
+#+BEGIN_SRC emacs-lisp
+(use-package! reviewer
+  :hook (after-init . reviewer-global-mode))
+#+END_SRC
+
 * Status
 
-~reviewer-mode~ (create/edit annotations) is in place. The org renderer
-is not written yet.
+~reviewer-mode~ (create/edit/show annotations) and the org renderer
+are both in place. No persistence across sessions yet.
