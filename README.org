@@ -68,3 +68,27 @@ In =config.el=:
 
 ~reviewer-mode~ (create/edit/show annotations) and the org renderer
 are both in place. No persistence across sessions yet.
+
+* Comparison to related packages
+
+** forge, lgtm.el, github-review, code-review
+
+These all assume the thing under review is a pull request on a forge
+(GitHub/GitLab/Bitbucket), and the endpoint is a remote submission --
+approve/reject/comment via API calls, backed by OAuth tokens,
+diff-hunk anchoring, and server-side threaded comments. reviewer.el
+has none of that: no PR, no token, no server. It works on any buffer
+-- a plain file, a diff, whatever's open -- and its output is an
+org-mode dump meant to be read by a human or handed to an agent, not
+posted anywhere.
+
+** [[https://github.com/bastibe/annotate.el][annotate.el]]
+
+The closer relative: same entry point (~C-c C-a~), same principle of
+leaving file content untouched. annotate.el persists annotations to a
+database across sessions, supports reply threads, and exports via its
+own markup format. reviewer.el is deliberately narrower: no
+persistence (session-local by design), no threading, and instead of a
+custom export markup, it renders straight to a plain org buffer meant
+for one-shot hand-off -- e.g. to an agent -- rather than long-term
+review storage.
