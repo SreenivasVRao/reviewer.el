@@ -237,20 +237,28 @@ be exactly what org needs back to find that mode's font-lock table."
                                             (overlay-start ov) (overlay-end ov))
                                     :note  (reviewer-annotation-text ov)))
                             annotations))
-           (out     (find-file-noselect (reviewer--render-file file))))
+           (out     (get-buffer-create (format "*reviewer:%s*" (file-name-nondirectory file)))))
       (with-current-buffer out
-        (rename-buffer (format "*reviewer:%s*" (file-name-nondirectory file)) t)
         (setq default-directory dir)
+        (setq buffer-file-name nil)
         (setq buffer-read-only nil)
         (erase-buffer)
         (org-mode)
+        ;; default-directory intentionally doesn't match this buffer's
+        ;; (nonexistent) file, so path-based modeline styles would render
+        ;; garbage; fall back to a plain buffer-name display if available.
+        ;; Set after `org-mode' since major modes wipe non-permanent
+        ;; buffer-local variables via `kill-all-local-variables'.
+        (when (boundp 'doom-modeline-buffer-file-name-style)
+          (setq-local doom-modeline-buffer-file-name-style 'buffer-name))
         (insert "#+STARTUP: showall\n")
         (insert (format "#+TITLE: Review: %s\n\n" file))
         (dolist (entry entries)
           (insert (format "* %s\n\n" (plist-get entry :range)))
           (insert (format "#+BEGIN_SRC %s\n%s\n#+END_SRC\n\n" lang (plist-get entry :text)))
           (insert (format "** Note\n\n%s\n\n" (plist-get entry :note))))
-        (save-buffer)
+        (write-region (point-min) (point-max) (reviewer--render-file file))
+        (set-buffer-modified-p nil)
         (setq buffer-read-only t)
         (reviewer-render-mode 1))
       (pop-to-buffer out))))
