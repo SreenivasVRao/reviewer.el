@@ -29,6 +29,10 @@
 (require 'thingatpt)
 (require 'org)
 
+(defgroup reviewer nil
+  "Annotate buffers without changing their content."
+  :group 'convenience)
+
 (defface reviewer-highlight-face
   '((t :inherit highlight))
   "Face used to highlight an annotated region.")
@@ -185,6 +189,10 @@ be exactly what org needs back to find that mode's font-lock table."
   :keymap reviewer-mode-map
   (dolist (ov (reviewer-all-annotations))
     (overlay-put ov 'face (when reviewer-mode 'reviewer-highlight-face))))
+
+;;;###autoload
+(define-globalized-minor-mode reviewer-global-mode reviewer-mode reviewer-mode
+  :group 'reviewer)
 
 (provide 'reviewer)
 ;;; reviewer.el ends here
