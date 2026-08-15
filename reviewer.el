@@ -187,9 +187,10 @@ be exactly what org needs back to find that mode's font-lock table."
         (format "Line %d" start)
       (format "Lines %d-%d" start end))))
 
-(defun reviewer--render-file (file dir)
-  "Return the path used to persist FILE's rendered review, inside DIR."
-  (expand-file-name (format "reviewer-%s.org" (file-name-base file)) dir))
+(defun reviewer--render-file (file)
+  "Return the /tmp/ path used to persist FILE's rendered review."
+  (expand-file-name (format "reviewer-%s.org" (file-name-base file))
+                    temporary-file-directory))
 
 (defun reviewer-render-next-annotation ()
   "Move point to the next annotation heading."
@@ -220,8 +221,7 @@ be exactly what org needs back to find that mode's font-lock table."
   :keymap reviewer-render-mode-map)
 
 (defun reviewer-render ()
-  "Render all annotations in the current buffer as an org file.
-The file is written next to the buffer, in its `default-directory'."
+  "Render all annotations in the current buffer as an org file in /tmp/."
   (interactive)
   (let ((annotations (reviewer-all-annotations)))
     (unless annotations
@@ -237,8 +237,10 @@ The file is written next to the buffer, in its `default-directory'."
                                             (overlay-start ov) (overlay-end ov))
                                     :note  (reviewer-annotation-text ov)))
                             annotations))
-           (out     (find-file-noselect (reviewer--render-file file dir))))
+           (out     (find-file-noselect (reviewer--render-file file))))
       (with-current-buffer out
+        (rename-buffer (format "*reviewer:%s*" (file-name-nondirectory file)) t)
+        (setq default-directory dir)
         (setq buffer-read-only nil)
         (erase-buffer)
         (org-mode)
