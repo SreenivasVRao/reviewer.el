@@ -110,10 +110,9 @@ be exactly what org needs back to find that mode's font-lock table."
         (format "Line %d" start)
       (format "Lines %d-%d" start end))))
 
-(defun reviewer--render-file (file)
-  "Return the /tmp/ path used to persist FILE's rendered review."
-  (expand-file-name (format "reviewer-%s.org" (file-name-base file))
-                    temporary-file-directory))
+(defun reviewer--render-file (file dir)
+  "Return the path used to persist FILE's rendered review, inside DIR."
+  (expand-file-name (format "reviewer-%s.org" (file-name-base file)) dir))
 
 (defun reviewer-render-next-annotation ()
   "Move point to the next annotation heading."
@@ -144,7 +143,8 @@ be exactly what org needs back to find that mode's font-lock table."
   :keymap reviewer-render-mode-map)
 
 (defun reviewer-render ()
-  "Render all annotations in the current buffer as an org file in /tmp/."
+  "Render all annotations in the current buffer as an org file.
+The file is written next to the buffer, in its `default-directory'."
   (interactive)
   (let ((annotations (reviewer-all-annotations)))
     (unless annotations
@@ -152,6 +152,7 @@ be exactly what org needs back to find that mode's font-lock table."
     ;; Overlay positions only mean something in this buffer, so resolve
     ;; everything derived from them here, before switching to OUT below.
     (let* ((file    (or (buffer-file-name) (buffer-name)))
+           (dir     default-directory)
            (lang    (reviewer--org-lang))
            (entries (mapcar (lambda (ov)
                               (list :range (reviewer--line-range ov)
@@ -159,7 +160,7 @@ be exactly what org needs back to find that mode's font-lock table."
                                             (overlay-start ov) (overlay-end ov))
                                     :note  (reviewer-annotation-text ov)))
                             annotations))
-           (out     (find-file-noselect (reviewer--render-file file))))
+           (out     (find-file-noselect (reviewer--render-file file dir))))
       (with-current-buffer out
         (setq buffer-read-only nil)
         (erase-buffer)
