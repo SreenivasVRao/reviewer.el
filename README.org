@@ -19,8 +19,8 @@ to serialize later if that's worth adding.
 - ~C-c C-s~ :: Show the annotation at point in a posframe (author,
   time, note), until the next command. Falls back to the echo area if
   [[https://github.com/tumashu/posframe][posframe]] isn't installed.
-- ~C-c C-r~ :: Render all annotations in the buffer as an org file,
-  written next to the buffer. In the rendered buffer, ~n~/~p~ move
+- ~C-c C-r~ :: Render all annotations in the buffer as an org file in
+  =/tmp/=, in a =*reviewer:file*= buffer. In the rendered buffer, ~n~/~p~ move
   between annotations and ~q~ quits.
 - ~M-x reviewer-clear-annotations~ :: Delete all annotations in the
   current buffer.
