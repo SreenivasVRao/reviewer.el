@@ -110,6 +110,10 @@
 (declare-function posframe-show "posframe")
 (declare-function posframe-hide "posframe")
 (declare-function posframe-workable-p "posframe")
+(declare-function magit-toplevel "magit-git")
+(declare-function magit-file-at-point "magit-git")
+(declare-function magit-get-current-branch "magit-git")
+(declare-function magit-rev-parse "magit-git")
 
 (defconst reviewer--posframe-buffer " *reviewer-posframe*"
   "Buffer used by posframe to display annotation text.")
@@ -176,8 +180,13 @@
 (defun reviewer--org-lang ()
   "Best-effort org src-block language tag for the current buffer.
 Derived by stripping \"-mode\" off `major-mode', which also happens to
-be exactly what org needs back to find that mode's font-lock table."
-  (string-remove-suffix "-mode" (symbol-name major-mode)))
+be exactly what org needs back to find that mode's font-lock table.
+Magit buffers (status, diff, revision, stash, ...) are diff-flavored
+under the hood but don't use `diff-mode', so map those to \"diff\"
+explicitly."
+  (if (derived-mode-p 'magit-mode)
+      "diff"
+    (string-remove-suffix "-mode" (symbol-name major-mode))))
 
 (defun reviewer--line-range (overlay)
   "Return \"Line N\" or \"Lines N-M\" for OVERLAY's line span."
@@ -186,6 +195,24 @@ be exactly what org needs back to find that mode's font-lock table."
     (if (= start end)
         (format "Line %d" start)
       (format "Lines %d-%d" start end))))
+
+(defun reviewer--magit-commit ()
+  "Return the commit hash for the current magit diff/revision buffer, if any."
+  (or (bound-and-true-p magit-buffer-revision-hash)
+      (bound-and-true-p magit-buffer-revision)))
+
+(defun reviewer--magit-branch ()
+  "Return the current branch, or nil if HEAD is detached."
+  (and (fboundp 'magit-get-current-branch) (magit-get-current-branch)))
+
+(defun reviewer--magit-head ()
+  "Return the commit hash HEAD currently points to."
+  (and (fboundp 'magit-rev-parse) (magit-rev-parse "HEAD")))
+
+(defun reviewer--magit-file-at (pos)
+  "Return the file the diff hunk at POS belongs to, if any."
+  (and (fboundp 'magit-file-at-point)
+       (save-excursion (goto-char pos) (magit-file-at-point))))
 
 (defun reviewer--render-file (file)
   "Return the /tmp/ path used to persist FILE's rendered review."
@@ -228,14 +255,26 @@ be exactly what org needs back to find that mode's font-lock table."
       (user-error "No annotations in this buffer"))
     ;; Overlay positions only mean something in this buffer, so resolve
     ;; everything derived from them here, before switching to OUT below.
-    (let* ((file    (or (buffer-file-name) (buffer-name)))
+    (let* ((magit-p (derived-mode-p 'magit-mode))
+           (repo    (and magit-p (fboundp 'magit-toplevel) (magit-toplevel)))
+           (branch  (and magit-p (reviewer--magit-branch)))
+           (head    (and magit-p (reviewer--magit-head)))
+           (commit  (and magit-p (reviewer--magit-commit)))
+           (file    (cond (buffer-file-name)
+                           ((and repo commit)
+                            (format "%s@%s" (directory-file-name repo)
+                                    (substring commit 0 (min 8 (length commit)))))
+                           (repo (directory-file-name repo))
+                           (t (buffer-name))))
            (dir     default-directory)
            (lang    (reviewer--org-lang))
            (entries (mapcar (lambda (ov)
                               (list :range (reviewer--line-range ov)
                                     :text  (buffer-substring-no-properties
                                             (overlay-start ov) (overlay-end ov))
-                                    :note  (reviewer-annotation-text ov)))
+                                    :note  (reviewer-annotation-text ov)
+                                    :file  (and magit-p (reviewer--magit-file-at
+                                                          (overlay-start ov)))))
                             annotations))
            (out     (get-buffer-create (format "*reviewer:%s*" (file-name-nondirectory file)))))
       (with-current-buffer out
@@ -252,9 +291,17 @@ be exactly what org needs back to find that mode's font-lock table."
         (when (boundp 'doom-modeline-buffer-file-name-style)
           (setq-local doom-modeline-buffer-file-name-style 'buffer-name))
         (insert "#+STARTUP: showall\n")
-        (insert (format "#+TITLE: Review: %s\n\n" file))
+        (insert (format "#+TITLE: Review: %s\n" file))
+        (when repo (insert (format "#+REPO: %s\n" repo)))
+        (when branch (insert (format "#+BRANCH: %s\n" branch)))
+        (when head (insert (format "#+HEAD: %s\n" head)))
+        (when commit (insert (format "#+COMMIT: %s\n" commit)))
+        (insert "\n")
         (dolist (entry entries)
-          (insert (format "* %s\n\n" (plist-get entry :range)))
+          (insert (format "* %s\n\n"
+                           (if (plist-get entry :file)
+                               (format "%s: %s" (plist-get entry :file) (plist-get entry :range))
+                             (plist-get entry :range))))
           (insert (format "#+BEGIN_SRC %s\n%s\n#+END_SRC\n\n" lang (plist-get entry :text)))
           (insert (format "** Note\n\n%s\n\n" (plist-get entry :note))))
         (write-region (point-min) (point-max) (reviewer--render-file file))
