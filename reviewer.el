@@ -96,6 +96,57 @@
       (user-error "No annotations in this buffer"))
     (mapc #'delete-overlay annotations)))
 
+(declare-function posframe-show "posframe")
+(declare-function posframe-hide "posframe")
+(declare-function posframe-workable-p "posframe")
+
+(defconst reviewer--posframe-buffer " *reviewer-posframe*"
+  "Buffer used by posframe to display annotation text.")
+
+(defface reviewer-posframe-face
+  '((t :inherit tooltip))
+  "Face used for the posframe that displays annotation text.")
+
+(defface reviewer-posframe-border-face
+  '((t :inherit font-lock-function-name-face))
+  "Face whose foreground colors the posframe's border.")
+
+(defun reviewer--display-annotation (content)
+  "Display CONTENT via posframe if available, otherwise the echo area."
+  (if (and (require 'posframe nil t) (posframe-workable-p))
+      (posframe-show reviewer--posframe-buffer
+                      :string (format "\n%s\n\n" content)
+                      :position (point)
+                      :background-color (face-attribute 'reviewer-posframe-face :background nil t)
+                      :foreground-color (face-attribute 'reviewer-posframe-face :foreground nil t)
+                      :internal-border-width 2
+                      :internal-border-color (face-attribute 'reviewer-posframe-border-face :foreground nil t)
+                      :left-fringe 16
+                      :right-fringe 16
+                      :min-width 40
+                      :min-height 5
+                      :accept-focus nil)
+    (message "%s" content)))
+
+(defun reviewer--hide-annotation-display ()
+  "Hide the posframe used to display annotations, if any is showing."
+  (when (and (fboundp 'posframe-hide) (get-buffer reviewer--posframe-buffer))
+    (posframe-hide reviewer--posframe-buffer)))
+
+(defun reviewer--hide-annotation-display-once ()
+  "Hide the annotation posframe, then remove self from `pre-command-hook'."
+  (reviewer--hide-annotation-display)
+  (remove-hook 'pre-command-hook #'reviewer--hide-annotation-display-once t))
+
+(defun reviewer-show-annotation-at-point ()
+  "Display the annotation at point, until the next command."
+  (interactive)
+  (let ((ov (reviewer--annotation-at (point))))
+    (unless ov
+      (user-error "No annotation at point"))
+    (reviewer--display-annotation (reviewer-annotation-text ov))
+    (add-hook 'pre-command-hook #'reviewer--hide-annotation-display-once nil t)))
+
 (defun reviewer--org-lang ()
   "Best-effort org src-block language tag for the current buffer.
 Derived by stripping \"-mode\" off `major-mode', which also happens to
@@ -180,6 +231,7 @@ The file is written next to the buffer, in its `default-directory'."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-a") #'reviewer-annotate)
     (define-key map (kbd "C-c C-r") #'reviewer-render)
+    (define-key map (kbd "C-c C-s") #'reviewer-show-annotation-at-point)
     map)
   "Keymap for `reviewer-mode'.")
 
@@ -189,7 +241,9 @@ The file is written next to the buffer, in its `default-directory'."
   :lighter " Reviewer"
   :keymap reviewer-mode-map
   (dolist (ov (reviewer-all-annotations))
-    (overlay-put ov 'face (when reviewer-mode 'reviewer-highlight-face))))
+    (overlay-put ov 'face (when reviewer-mode 'reviewer-highlight-face)))
+  (unless reviewer-mode
+    (reviewer--hide-annotation-display)))
 
 ;;;###autoload
 (define-globalized-minor-mode reviewer-global-mode reviewer-mode reviewer-mode
