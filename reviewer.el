@@ -107,6 +107,26 @@
       (user-error "No annotations in this buffer"))
     (mapc #'delete-overlay annotations)))
 
+(defun reviewer-delete-annotation-at-point ()
+  "Delete the annotation at point."
+  (interactive)
+  (let ((ov (reviewer--annotation-at (point))))
+    (unless ov
+      (user-error "No annotation at point"))
+    (delete-overlay ov)))
+
+(defun reviewer-delete-region-annotations ()
+  "Delete all annotations overlapping the active region."
+  (interactive)
+  (unless (use-region-p)
+    (user-error "No active region"))
+  (let ((annotations (seq-filter #'reviewer--annotation-p
+                                  (overlays-in (region-beginning) (region-end)))))
+    (unless annotations
+      (user-error "No annotations in region"))
+    (mapc #'delete-overlay annotations)
+    (deactivate-mark)))
+
 (declare-function posframe-show "posframe")
 (declare-function posframe-hide "posframe")
 (declare-function posframe-workable-p "posframe")
@@ -346,6 +366,8 @@ Unlike `reviewer-render', the render buffer is created but not displayed."
     (define-key map (kbd "s") #'reviewer-show-annotation-at-point)
     (define-key map (kbd "e") #'reviewer-yank-render-file-name)
     (define-key map (kbd "y") #'reviewer-yank-render)
+    (define-key map (kbd "x") #'reviewer-delete-annotation-at-point)
+    (define-key map (kbd "k") #'reviewer-delete-region-annotations)
     map)
   "Prefix keymap for `reviewer-mode' commands, bound to `C-c r'.")
 
