@@ -11,6 +11,8 @@ not for submitting comments to a remote/forge. No persistence yet --
 annotations are session-local -- though the data is kept simple enough
 to serialize later if that's worth adding.
 
+[[./images/demo.gif]]
+
 * Usage
 
 - ~C-c C-a~ :: Annotate the active region (or word at point). On an
