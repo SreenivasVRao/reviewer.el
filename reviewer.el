@@ -9,7 +9,7 @@
 ;;; Commentary:
 
 ;; reviewer-mode is a minor mode for annotating a buffer (a file or a
-;; diff) without changing its content.  C-c C-a creates an annotation
+;; diff) without changing its content.  C-c r a creates an annotation
 ;; on the active region (or the word at point), and edits the
 ;; annotation under point if one already exists; clearing the text
 ;; deletes it.
@@ -247,9 +247,15 @@ explicitly."
   :lighter " Reviewer-Render"
   :keymap reviewer-render-mode-map)
 
-(defun reviewer-render ()
-  "Render all annotations in the current buffer as an org file in /tmp/."
-  (interactive)
+(defvar-local reviewer--render-path nil
+  "Path of the /tmp/ org file this render buffer was persisted to.")
+
+(defun reviewer--render-to-buffer ()
+  "Render this buffer's annotations as org into a `*reviewer:...*' buffer.
+Return that buffer, left in `reviewer-render-mode' and also persisted
+to /tmp/ as a side effect, with that file's path in the returned
+buffer's `reviewer--render-path'.  Signals a `user-error' if there are
+no annotations."
   (let ((annotations (reviewer-all-annotations)))
     (unless annotations
       (user-error "No annotations in this buffer"))
@@ -304,17 +310,48 @@ explicitly."
                              (plist-get entry :range))))
           (insert (format "#+BEGIN_SRC %s\n%s\n#+END_SRC\n\n" lang (plist-get entry :text)))
           (insert (format "** Note\n\n%s\n\n" (plist-get entry :note))))
-        (write-region (point-min) (point-max) (reviewer--render-file file))
+        (setq reviewer--render-path (reviewer--render-file file))
+        (write-region (point-min) (point-max) reviewer--render-path)
         (set-buffer-modified-p nil)
         (setq buffer-read-only t)
         (reviewer-render-mode 1))
-      (pop-to-buffer out))))
+      out)))
+
+(defun reviewer-render ()
+  "Render all annotations in the current buffer as an org file in /tmp/."
+  (interactive)
+  (pop-to-buffer (reviewer--render-to-buffer)))
+
+(defun reviewer-yank-render ()
+  "Render annotations into a hidden buffer and copy the result to the kill ring.
+Unlike `reviewer-render', the render buffer is created but not displayed."
+  (interactive)
+  (let ((out (reviewer--render-to-buffer)))
+    (kill-new (with-current-buffer out (buffer-string)))
+    (message "Rendered annotations copied to kill ring")))
+
+(defun reviewer-yank-render-file-name ()
+  "Render annotations to /tmp/ and copy the render file's path to the kill ring.
+Unlike `reviewer-render', the render buffer is created but not displayed."
+  (interactive)
+  (let* ((out  (reviewer--render-to-buffer))
+         (path (buffer-local-value 'reviewer--render-path out)))
+    (kill-new path)
+    (message "Render file path copied to kill ring: %s" path)))
+
+(defvar reviewer-command-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "a") #'reviewer-annotate)
+    (define-key map (kbd "r") #'reviewer-render)
+    (define-key map (kbd "s") #'reviewer-show-annotation-at-point)
+    (define-key map (kbd "e") #'reviewer-yank-render-file-name)
+    (define-key map (kbd "y") #'reviewer-yank-render)
+    map)
+  "Prefix keymap for `reviewer-mode' commands, bound to `C-c r'.")
 
 (defvar reviewer-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-a") #'reviewer-annotate)
-    (define-key map (kbd "C-c C-r") #'reviewer-render)
-    (define-key map (kbd "C-c C-s") #'reviewer-show-annotation-at-point)
+    (define-key map (kbd "C-c r") reviewer-command-map)
     map)
   "Keymap for `reviewer-mode'.")
 
