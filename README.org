@@ -1,6 +1,6 @@
 #+TITLE: reviewer.el
 
-A minor mode for annotating a file or a diff (~C-c C-a~ on a region or
+A minor mode for annotating a file or a diff (~C-c r a~ on a region or
 word, editable in place) without changing its content, then rendering
 those annotations as a plain org buffer -- file, line number(s), the
 quoted span, and the note -- instead of injecting comments into the
@@ -15,19 +15,35 @@ to serialize later if that's worth adding.
 
 * Usage
 
-- ~C-c C-a~ :: Annotate the active region (or word at point). On an
+All commands live under the ~C-c r~ prefix, which by default (see
+~reviewer-use-transient~ below) pops up a transient menu.
+
+- ~C-c r a~ :: Annotate the active region (or word at point). On an
   existing annotation, edit its note instead; clearing the text
   deletes it.
-- ~C-c C-s~ :: Show the annotation at point in a posframe (author,
+- ~C-c r s~ :: Show the annotation at point in a posframe (author,
   time, note), until the next command. Falls back to the echo area if
   [[https://github.com/tumashu/posframe][posframe]] isn't installed.
-- ~C-c C-r~ :: Render all annotations in the buffer as an org file in
+- ~C-c r x~ :: Delete the annotation at point.
+- ~C-c r k~ :: Delete all annotations overlapping the active region.
+- ~C-c r c~ :: Delete all annotations in the current buffer.
+- ~C-c r r~ :: Render all annotations in the buffer as an org file in
   =/tmp/=, in a =*reviewer:file*= buffer. In the rendered buffer, ~n~/~p~ move
   between annotations and ~q~ quits.
-- ~M-x reviewer-clear-annotations~ :: Delete all annotations in the
-  current buffer.
+- ~C-c r y~ :: Render annotations and copy the result to the kill
+  ring, without displaying the render buffer.
+- ~C-c r e~ :: Render annotations to =/tmp/= and copy the render
+  file's path to the kill ring.
 
 ~reviewer-global-mode~ turns ~reviewer-mode~ on in every buffer.
+
+** Transient menu
+
+~C-c r~ opens a transient menu (via [[https://github.com/magit/transient][transient]]) listing all of the above
+under "review" (annotation commands) and "summarize" (render
+commands). Set ~reviewer-use-transient~ to ~nil~ to disable the popup and
+make ~C-c r~ a plain prefix key instead -- e.g. ~C-c r a~ dispatches
+straight to ~reviewer-annotate~ with no menu shown.
 
 * Installation
 
@@ -84,10 +100,11 @@ posted anywhere.
 
 ** [[https://github.com/bastibe/annotate.el][annotate.el]]
 
-The closer relative: same entry point (~C-c C-a~), same principle of
-leaving file content untouched. annotate.el persists annotations to a
-database across sessions, supports reply threads, and exports via its
-own markup format. reviewer.el is deliberately narrower: no
+The closer relative: same principle of a region/word-triggered,
+in-place-editable annotation that leaves file content untouched.
+annotate.el persists annotations to a database across sessions,
+supports reply threads, and exports via its own markup format.
+reviewer.el is deliberately narrower: no
 persistence (session-local by design), no threading, and instead of a
 custom export markup, it renders straight to a plain org buffer meant
 for one-shot hand-off -- e.g. to an agent -- rather than long-term
