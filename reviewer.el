@@ -54,6 +54,14 @@
   "Return the note text stored on annotation OVERLAY."
   (overlay-get overlay 'reviewer-note))
 
+(defun reviewer-annotation-author (overlay)
+  "Return the author who created annotation OVERLAY."
+  (overlay-get overlay 'reviewer-author))
+
+(defun reviewer-annotation-time (overlay)
+  "Return the creation time of annotation OVERLAY, as a string."
+  (overlay-get overlay 'reviewer-time))
+
 (defun reviewer--region-or-word-bounds ()
   "Return (START . END) for the active region, or the word at point."
   (if (use-region-p)
@@ -70,8 +78,11 @@
         (user-error "Annotation text can not be empty"))
       (let ((ov (make-overlay (car bounds) (cdr bounds))))
         (overlay-put ov 'reviewer-note note)
+        (overlay-put ov 'reviewer-author (user-login-name))
+        (overlay-put ov 'reviewer-time (format-time-string "%H:%M"))
         (overlay-put ov 'face 'reviewer-highlight-face)
-        (overlay-put ov 'evaporate t)))))
+        (overlay-put ov 'evaporate t))
+      (deactivate-mark))))
 
 (defun reviewer--edit-annotation (overlay)
   "Prompt to edit, or delete on empty input, the note on annotation OVERLAY."
@@ -111,6 +122,21 @@
   '((t :inherit font-lock-function-name-face))
   "Face whose foreground colors the posframe's border.")
 
+(defface reviewer-posframe-author-face
+  '((t :inherit font-lock-keyword-face :weight bold))
+  "Face used for the author name in the annotation posframe header.")
+
+(defface reviewer-posframe-time-face
+  '((t :inherit font-lock-comment-face))
+  "Face used for the timestamp in the annotation posframe header.")
+
+(defun reviewer--annotation-content (overlay)
+  "Format annotation OVERLAY as an \"author (time)\" header plus its note."
+  (concat (propertize (reviewer-annotation-author overlay) 'face 'reviewer-posframe-author-face)
+          " "
+          (propertize (format "(%s)" (reviewer-annotation-time overlay)) 'face 'reviewer-posframe-time-face)
+          "\n\n" (reviewer-annotation-text overlay)))
+
 (defun reviewer--display-annotation (content)
   "Display CONTENT via posframe if available, otherwise the echo area."
   (if (and (require 'posframe nil t) (posframe-workable-p))
@@ -144,7 +170,7 @@
   (let ((ov (reviewer--annotation-at (point))))
     (unless ov
       (user-error "No annotation at point"))
-    (reviewer--display-annotation (reviewer-annotation-text ov))
+    (reviewer--display-annotation (reviewer--annotation-content ov))
     (add-hook 'pre-command-hook #'reviewer--hide-annotation-display-once nil t)))
 
 (defun reviewer--org-lang ()
