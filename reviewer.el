@@ -369,8 +369,11 @@ Unlike `reviewer-render', the render buffer is created but not displayed."
     (define-key map (kbd "y") #'reviewer-yank-render)
     (define-key map (kbd "x") #'reviewer-delete-annotation-at-point)
     (define-key map (kbd "k") #'reviewer-delete-region-annotations)
+    (define-key map (kbd "c") #'reviewer-clear-annotations)
     map)
-  "Prefix keymap for `reviewer-mode' commands, bound to `C-c r'.")
+  "Prefix keymap for `reviewer-mode' commands, bound to `C-c r'.
+Only used when `reviewer-use-transient' is nil; otherwise `C-c r' is
+bound to `reviewer-transient' instead.")
 
 ;;;###autoload (autoload 'reviewer-transient "reviewer" nil t)
 (transient-define-prefix reviewer-transient ()
@@ -387,9 +390,25 @@ Unlike `reviewer-render', the render buffer is created but not displayed."
     ("y" "yank render"           reviewer-yank-render)
     ("e" "yank render file name" reviewer-yank-render-file-name)]])
 
+(defun reviewer--set-use-transient (symbol value)
+  "Set SYMBOL to VALUE and rebind `C-c r' in `reviewer-mode-map' accordingly."
+  (set-default symbol value)
+  (when (boundp 'reviewer-mode-map)
+    (define-key reviewer-mode-map (kbd "C-c r")
+      (if value #'reviewer-transient reviewer-command-map))))
+
+(defcustom reviewer-use-transient t
+  "Whether `C-c r' opens a transient menu of `reviewer-mode' commands.
+When nil, `C-c r' is a plain prefix key instead: press `C-c r' then
+one of the individual command keys bound in `reviewer-command-map'."
+  :type 'boolean
+  :group 'reviewer
+  :set #'reviewer--set-use-transient)
+
 (defvar reviewer-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c r") #'reviewer-transient)
+    (define-key map (kbd "C-c r")
+      (if reviewer-use-transient #'reviewer-transient reviewer-command-map))
     map)
   "Keymap for `reviewer-mode'.")
 
