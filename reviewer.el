@@ -4,7 +4,7 @@
 
 ;; Author: Sreenivas Venkobarao
 ;; URL: https://github.com/SreenivasVRao/reviewer.el
-;; Package-Requires: ((emacs "29.1"))
+;; Package-Requires: ((emacs "29.1") (transient "0.4.0"))
 
 ;;; Commentary:
 
@@ -28,6 +28,7 @@
 (require 'subr-x)
 (require 'thingatpt)
 (require 'org)
+(require 'transient)
 
 (defgroup reviewer nil
   "Annotate buffers without changing their content."
@@ -371,9 +372,24 @@ Unlike `reviewer-render', the render buffer is created but not displayed."
     map)
   "Prefix keymap for `reviewer-mode' commands, bound to `C-c r'.")
 
+;;;###autoload (autoload 'reviewer-transient "reviewer" nil t)
+(transient-define-prefix reviewer-transient ()
+  "Transient menu for `reviewer-mode' commands."
+  ["reviewer-mode\n"
+   ["review"
+    ("a" "annotate/edit at point" reviewer-annotate)
+    ("s" "show at point"         reviewer-show-annotation-at-point)
+    ("x" "delete at point"       reviewer-delete-annotation-at-point)
+    ("k" "delete in region"      reviewer-delete-region-annotations)
+    ("c" "clear all"             reviewer-clear-annotations)]
+   ["summarize"
+    ("r" "render"                reviewer-render)
+    ("y" "yank render"           reviewer-yank-render)
+    ("e" "yank render file name" reviewer-yank-render-file-name)]])
+
 (defvar reviewer-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c r") reviewer-command-map)
+    (define-key map (kbd "C-c r") #'reviewer-transient)
     map)
   "Keymap for `reviewer-mode'.")
 
