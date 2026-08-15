@@ -45,6 +45,8 @@ commands). Set ~reviewer-use-transient~ to ~nil~ to disable the popup and
 make ~C-c r~ a plain prefix key instead -- e.g. ~C-c r a~ dispatches
 straight to ~reviewer-annotate~ with no menu shown.
 
+[[./images/transient.gif]]
+
 * Installation
 
 ** straight.el + use-package
