@@ -69,28 +69,97 @@
       (cons (region-beginning) (region-end))
     (bounds-of-thing-at-point 'word)))
 
+(defconst reviewer--edit-buffer-name "*reviewer-annotation*"
+  "Name of the buffer used to edit an annotation's note text.")
+
+(defvar reviewer-annotation-edit-buffer-action
+  '((display-buffer-reuse-window display-buffer-below-selected)
+    (window-height . 20))
+  "Action used to display the annotation edit buffer, unless overridden.
+Add an entry keyed on `reviewer--edit-buffer-name' to
+`display-buffer-alist' to customize placement instead; that takes
+precedence over this.")
+
+(defvar-local reviewer--edit-target nil
+  "What `reviewer-annotation-edit-finish' saves this buffer's text onto.
+Either the overlay of an existing annotation being edited, or a list
+of (BUFFER START END) describing where to create a new one.")
+
+(defvar-local reviewer--edit-window-config nil
+  "Window configuration to restore when this edit buffer is closed.")
+
+(defun reviewer--edit-cleanup (buffer wconf)
+  "Restore WCONF and kill BUFFER, the annotation edit buffer."
+  (set-window-configuration wconf)
+  (kill-buffer buffer))
+
+(defun reviewer-annotation-edit-finish ()
+  "Save this buffer's text onto the annotation being edited, then close it.
+Deletes the annotation instead if the text was left empty."
+  (interactive)
+  (let ((text (string-trim (buffer-string)))
+        (target reviewer--edit-target))
+    (reviewer--edit-cleanup (current-buffer) reviewer--edit-window-config)
+    (if (overlayp target)
+        (if (string-empty-p text)
+            (delete-overlay target)
+          (overlay-put target 'reviewer-note text))
+      (unless (string-empty-p text)
+        (seq-let (buffer start end) target
+          (with-current-buffer buffer
+            (let ((ov (make-overlay start end)))
+              (overlay-put ov 'reviewer-note text)
+              (overlay-put ov 'reviewer-author (user-login-name))
+              (overlay-put ov 'reviewer-time (format-time-string "%H:%M"))
+              (overlay-put ov 'face 'reviewer-highlight-face)
+              (overlay-put ov 'evaporate t))
+            (deactivate-mark)))))))
+
+(defun reviewer-annotation-edit-abort ()
+  "Abandon this annotation edit without changing anything."
+  (interactive)
+  (reviewer--edit-cleanup (current-buffer) reviewer--edit-window-config))
+
+(defvar reviewer-annotation-edit-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'reviewer-annotation-edit-finish)
+    (define-key map (kbd "C-c C-k") #'reviewer-annotation-edit-abort)
+    map)
+  "Keymap for `reviewer-annotation-edit-mode'.")
+
+(define-derived-mode reviewer-annotation-edit-mode text-mode "Reviewer-Edit"
+  "Major mode for editing a `reviewer-mode' annotation's note text.
+\\{reviewer-annotation-edit-mode-map}"
+  (setq header-line-format
+        (substitute-command-keys
+         (concat "Edit annotation.  "
+                 "\\[reviewer-annotation-edit-finish] to save, "
+                 "\\[reviewer-annotation-edit-abort] to cancel."))))
+
+(defun reviewer--open-edit-buffer (target initial-text)
+  "Pop up the annotation edit buffer for TARGET, pre-filled with INITIAL-TEXT.
+TARGET is either an existing annotation overlay, or a list of
+\(BUFFER START END\) for a not-yet-created one; see `reviewer--edit-target'."
+  (let ((wconf (current-window-configuration)))
+    (pop-to-buffer (get-buffer-create reviewer--edit-buffer-name)
+                    reviewer-annotation-edit-buffer-action)
+    (reviewer-annotation-edit-mode)
+    (erase-buffer)
+    (when initial-text (insert initial-text))
+    (goto-char (point-max))
+    (setq reviewer--edit-target target)
+    (setq reviewer--edit-window-config wconf)))
+
 (defun reviewer--create-annotation ()
-  "Prompt for a note and create a new annotation overlay."
+  "Open the edit buffer to create a new annotation on the region/word."
   (let ((bounds (reviewer--region-or-word-bounds)))
     (unless bounds
       (user-error "No region or word at point to annotate"))
-    (let ((note (read-string "Annotation: ")))
-      (when (string-empty-p note)
-        (user-error "Annotation text can not be empty"))
-      (let ((ov (make-overlay (car bounds) (cdr bounds))))
-        (overlay-put ov 'reviewer-note note)
-        (overlay-put ov 'reviewer-author (user-login-name))
-        (overlay-put ov 'reviewer-time (format-time-string "%H:%M"))
-        (overlay-put ov 'face 'reviewer-highlight-face)
-        (overlay-put ov 'evaporate t))
-      (deactivate-mark))))
+    (reviewer--open-edit-buffer (list (current-buffer) (car bounds) (cdr bounds)) nil)))
 
 (defun reviewer--edit-annotation (overlay)
-  "Prompt to edit, or delete on empty input, the note on annotation OVERLAY."
-  (let ((note (read-string "Annotation: " (overlay-get overlay 'reviewer-note))))
-    (if (string-empty-p note)
-        (delete-overlay overlay)
-      (overlay-put overlay 'reviewer-note note))))
+  "Open the edit buffer to edit the note text on annotation OVERLAY."
+  (reviewer--open-edit-buffer overlay (overlay-get overlay 'reviewer-note)))
 
 (defun reviewer-annotate ()
   "Create an annotation on the active region/word, or edit the one at point."
