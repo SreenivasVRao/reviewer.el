@@ -427,7 +427,7 @@ Unlike `reviewer-render', the render buffer is created but not displayed."
   (let* ((out  (reviewer--render-to-buffer))
          (path (buffer-local-value 'reviewer--render-path out)))
     (kill-new path)
-    (message "Render file path copied to kill ring: %s" path)))
+    (message "Copied as %s" path)))
 
 (defvar reviewer-command-map
   (let ((map (make-sparse-keymap)))
@@ -449,15 +449,15 @@ bound to `reviewer-transient' instead.")
   "Transient menu for `reviewer-mode' commands."
   ["reviewer-mode\n"
    ["review"
-    ("a" "annotate/edit at point" reviewer-annotate)
-    ("s" "show at point"         reviewer-show-annotation-at-point)
-    ("x" "delete at point"       reviewer-delete-annotation-at-point)
-    ("k" "delete in region"      reviewer-delete-region-annotations)
-    ("c" "clear all"             reviewer-clear-annotations)]
+    ("a" "annotate region"              reviewer-annotate)
+    ("s" "view annotation"              reviewer-show-annotation-at-point)
+    ("x" "delete annotation"            reviewer-delete-annotation-at-point)
+    ("k" "clear annotations in region"   reviewer-delete-region-annotations)
+    ("c" "clear all annotations in file" reviewer-clear-annotations)]
    ["summarize"
-    ("r" "render"                reviewer-render)
-    ("y" "yank render"           reviewer-yank-render)
-    ("e" "yank render file name" reviewer-yank-render-file-name)]])
+    ("r" "show all annotations"         reviewer-render)
+    ("y" "copy annotations"             reviewer-yank-render)
+    ("e" "export annotations as file"   reviewer-yank-render-file-name)]])
 
 (defun reviewer--set-use-transient (symbol value)
   "Set SYMBOL to VALUE and rebind `C-c r' in `reviewer-mode-map' accordingly."
