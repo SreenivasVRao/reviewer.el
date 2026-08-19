@@ -19,8 +19,12 @@ All commands live under the ~C-c r~ prefix, which by default (see
 ~reviewer-use-transient~ below) pops up a transient menu.
 
 - ~C-c r a~ :: Annotate the active region (or word at point). On an
-  existing annotation, edit its note instead; clearing the text
-  deletes it.
+  existing annotation, edit its note instead. Either way, a small
+  =*reviewer-annotation*= buffer pops up to edit the note text in --
+  ~C-c C-c~ saves (clearing the text deletes the annotation), ~C-c C-k~
+  cancels. Customize placement via
+  ~reviewer-annotation-edit-buffer-action~, or an entry in
+  ~display-buffer-alist~ keyed on the buffer name.
 - ~C-c r s~ :: Show the annotation at point in a posframe (author,
   time, note), until the next command. Falls back to the echo area if
   [[https://github.com/tumashu/posframe][posframe]] isn't installed.
