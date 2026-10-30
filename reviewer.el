@@ -239,6 +239,24 @@ See `reviewer--edit-target' for the shapes TARGET can take."
     (mapc #'delete-overlay annotations)
     (run-hooks 'reviewer-annotation-change-hook)))
 
+(defun reviewer-clear-project-annotations ()
+  "Delete all annotations in the current project."
+  (interactive)
+  (let ((root (reviewer--project-root)))
+    (unless root
+      (user-error "No project found (Projectile/project.el) for this buffer"))
+    (let* ((buffers (reviewer--project-buffers root))
+           (annotations (mapcan (lambda (buffer)
+                                  (with-current-buffer buffer
+                                    (reviewer-all-annotations)))
+                                buffers)))
+      (unless annotations
+        (user-error "No annotations in any buffer under %s" root))
+      (mapc #'delete-overlay annotations)
+      (run-hooks 'reviewer-annotation-change-hook)
+      (message "Cleared %d project annotation%s"
+               (length annotations) (if (= (length annotations) 1) "" "s")))))
+
 (defun reviewer-delete-annotation-at-point ()
   "Delete the annotation at point."
   (interactive)
@@ -701,6 +719,7 @@ See `reviewer--project-root' for how the project is found."
     (define-key map (kbd "x") #'reviewer-delete-annotation-at-point)
     (define-key map (kbd "k") #'reviewer-delete-region-annotations)
     (define-key map (kbd "c") #'reviewer-clear-annotations)
+    (define-key map (kbd "C") #'reviewer-clear-project-annotations)
     map)
   "Prefix keymap for `reviewer-mode' commands, bound to `C-c r'.
 Only used when `reviewer-use-transient' is nil; otherwise `C-c r' is
@@ -724,7 +743,8 @@ bound to `reviewer-transient' instead.")
    ["project"
     ("P" "show all annotations"       reviewer-render-project)
     ("Y" "copy annotations"           reviewer-yank-render-project)
-    ("E" "export annotations as file" reviewer-yank-render-project-file-name)]]
+    ("E" "export annotations as file" reviewer-yank-render-project-file-name)
+    ("C" "clear all annotations"              reviewer-clear-project-annotations)]]
   [""])
 
 (defun reviewer--set-use-transient (symbol value)

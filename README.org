@@ -29,6 +29,10 @@ https://github.com/user-attachments/assets/99aa946f-55a2-444f-8cae-292e24cfb378
   overlapping the active region.
 - ~reviewer-clear-annotations~ :: Delete all annotations in the
   current buffer.
+- ~reviewer-clear-project-annotations~ :: Delete all annotations in
+  every annotated buffer in the current project. The project is found
+  with [[https://github.com/bbatsov/projectile][Projectile]] if it's installed and active, or with Emacs's built-in
+  ~project.el~ otherwise.
 - ~reviewer-render~ :: Render all annotations in the buffer as an org
   file in =/tmp/=, displayed in a =*reviewer:file*= buffer.
   ~reviewer-render-next-annotation~ and
@@ -57,8 +61,8 @@ digest of the thread before you go read it in full elsewhere.
 reviewer-mode binds a default prefix key that opens a transient menu
 (via [[https://github.com/magit/transient][transient]]) listing all of the commands above, in three columns:
 "review" (annotation commands), "buffer" (render commands for the
-current buffer), and "project" (the same commands, project-wide). Set
-~reviewer-use-transient~ to ~nil~ to make that prefix a plain keymap
+current buffer), and "project" (project-wide render and clear commands).
+Set ~reviewer-use-transient~ to ~nil~ to make that prefix a plain keymap
 instead, dispatching straight to each command with no menu shown.
 
 [[./images/transient.gif]]
