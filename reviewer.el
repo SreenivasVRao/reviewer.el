@@ -46,6 +46,14 @@
   "Face used to highlight an annotated region."
   :group 'reviewer)
 
+(defcustom reviewer-confirm-before-clear t
+  "Whether to prompt for confirmation before a bulk annotation delete.
+Guards `reviewer-clear-annotations', `reviewer-clear-project-annotations',
+and `reviewer-delete-region-annotations' -- the commands that can delete
+more than one annotation at once.  Set to nil to skip the prompt."
+  :type 'boolean
+  :group 'reviewer)
+
 (defun reviewer--annotation-p (overlay)
   "Return non-nil if OVERLAY is a reviewer annotation."
   (overlay-get overlay 'reviewer-note))
@@ -236,8 +244,11 @@ See `reviewer--edit-target' for the shapes TARGET can take."
   (let ((annotations (reviewer-all-annotations)))
     (unless annotations
       (user-error "No annotations in this buffer"))
-    (mapc #'delete-overlay annotations)
-    (run-hooks 'reviewer-annotation-change-hook)))
+    (when (or (not reviewer-confirm-before-clear)
+              (y-or-n-p (format "Delete %d annotation%s in this buffer? "
+                                 (length annotations) (if (= (length annotations) 1) "" "s"))))
+      (mapc #'delete-overlay annotations)
+      (run-hooks 'reviewer-annotation-change-hook))))
 
 (defun reviewer-clear-project-annotations ()
   "Delete all annotations in the current project."
@@ -252,10 +263,13 @@ See `reviewer--edit-target' for the shapes TARGET can take."
                                 buffers)))
       (unless annotations
         (user-error "No annotations in any buffer under %s" root))
-      (mapc #'delete-overlay annotations)
-      (run-hooks 'reviewer-annotation-change-hook)
-      (message "Cleared %d project annotation%s"
-               (length annotations) (if (= (length annotations) 1) "" "s")))))
+      (when (or (not reviewer-confirm-before-clear)
+                (y-or-n-p (format "Delete %d annotation%s across project %s? "
+                                   (length annotations) (if (= (length annotations) 1) "" "s") root)))
+        (mapc #'delete-overlay annotations)
+        (run-hooks 'reviewer-annotation-change-hook)
+        (message "Cleared %d project annotation%s"
+                 (length annotations) (if (= (length annotations) 1) "" "s"))))))
 
 (defun reviewer-delete-annotation-at-point ()
   "Delete the annotation at point."
@@ -275,9 +289,12 @@ See `reviewer--edit-target' for the shapes TARGET can take."
                                   (overlays-in (region-beginning) (region-end)))))
     (unless annotations
       (user-error "No annotations in region"))
-    (mapc #'delete-overlay annotations)
-    (deactivate-mark)
-    (run-hooks 'reviewer-annotation-change-hook)))
+    (when (or (not reviewer-confirm-before-clear)
+              (y-or-n-p (format "Delete %d annotation%s in region? "
+                                 (length annotations) (if (= (length annotations) 1) "" "s"))))
+      (mapc #'delete-overlay annotations)
+      (deactivate-mark)
+      (run-hooks 'reviewer-annotation-change-hook))))
 
 (declare-function posframe-show "posframe")
 (declare-function posframe-hide "posframe")

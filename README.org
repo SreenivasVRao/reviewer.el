@@ -26,13 +26,17 @@ https://github.com/user-attachments/assets/99aa946f-55a2-444f-8cae-292e24cfb378
 - ~reviewer-delete-annotation-at-point~ :: Delete the annotation at
   point.
 - ~reviewer-delete-region-annotations~ :: Delete all annotations
-  overlapping the active region.
+  overlapping the active region, after confirming.
 - ~reviewer-clear-annotations~ :: Delete all annotations in the
-  current buffer.
+  current buffer, after confirming.
 - ~reviewer-clear-project-annotations~ :: Delete all annotations in
-  every annotated buffer in the current project. The project is found
-  with [[https://github.com/bbatsov/projectile][Projectile]] if it's installed and active, or with Emacs's built-in
-  ~project.el~ otherwise.
+  every annotated buffer in the current project, after confirming.
+  The project is found with [[https://github.com/bbatsov/projectile][Projectile]] if it's installed and active, or
+  with Emacs's built-in ~project.el~ otherwise.
+
+  These three bulk-delete commands prompt with ~y-or-n-p~ before
+  deleting, since the delete isn't undoable. Set
+  ~reviewer-confirm-before-clear~ to ~nil~ to skip the prompt.
 - ~reviewer-render~ :: Render all annotations in the buffer as an org
   file in =/tmp/=, displayed in a =*reviewer:file*= buffer.
   ~reviewer-render-next-annotation~ and
@@ -194,6 +198,10 @@ that view.
   widening the frame), and ~:min-height~ (lines).
 - ~reviewer-use-transient~ :: Whether the default prefix key opens
   the transient menu (see above) or a plain keymap.
+- ~reviewer-confirm-before-clear~ :: Whether
+  ~reviewer-clear-annotations~, ~reviewer-clear-project-annotations~,
+  and ~reviewer-delete-region-annotations~ prompt for confirmation
+  before deleting. Defaults to ~t~; set to ~nil~ to delete immediately.
 - ~reviewer-annotation-edit-buffer-action~ :: Where the note-editing
   buffer from ~reviewer-annotate~ pops up.
 - ~reviewer-enable-treemacs~ :: Whether to load the treemacs
@@ -217,6 +225,8 @@ A full sample configuration, documenting each of these:
   (reviewer-posframe-parameters '(:border-width 2 :fringe 16 :width 40 :min-height 5))
   ;; Load the treemacs tree/detail view.
   (reviewer-enable-treemacs t)
+  ;; Skip the confirmation prompt before a bulk annotation delete.
+  (reviewer-confirm-before-clear nil)
   :custom-face
   ;; Highlight for the annotated region itself.
   (reviewer-highlight-face ((t :inherit highlight)))
