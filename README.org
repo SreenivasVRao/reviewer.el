@@ -74,10 +74,14 @@ instead, dispatching straight to each command with no menu shown.
 * The treemacs tree/detail view
 
 reviewer-treemacs.el adds an optional sidebar: a tree of every
-annotation thread across your buffers, docked to one side of the
-frame, with a detail pane underneath showing the selected thread's
-full text. Where the posframe popup shows one annotation at a time,
-this is a persistent view for browsing all of them.
+annotation thread across your current project's buffers, docked to
+one side of the frame, with a detail pane underneath showing the
+selected thread's full text. Where the posframe popup shows one
+annotation at a time, this is a persistent view for browsing all of
+them. The project is found with [[https://github.com/bbatsov/projectile][Projectile]] if it's installed and active,
+or with Emacs's built-in ~project.el~ otherwise, from the buffer the
+pane is opened from; opening it from a buffer with no project falls
+back to every annotated buffer, unscoped.
 
 It's a separate feature, off by default, since treemacs is a heavier
 dependency than the mode's other optional integrations. Turn it on

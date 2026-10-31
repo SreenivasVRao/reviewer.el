@@ -47,14 +47,18 @@
 ;; also gets a "t" suffix for the same toggle.
 ;;
 ;; The tree groups every live buffer with at least one annotation --
-;; found by scanning `(buffer-list)' and calling
+;; found via `reviewer--project-buffers' and calling
 ;; `reviewer-all-annotations' in each -- under a file/buffer label from
 ;; `reviewer-treemacs--buffer-label', with each annotation's overlay
-;; itself as the thread node underneath.  Rebuilt fresh -- same as
-;; toggling the pane closed and back open, expand/collapse state and
-;; all -- on `reviewer-annotation-change-hook', so an annotation
-;; created, edited, replied to, or deleted anywhere, not just through
-;; this pane's own commands, shows up here without waiting on a manual
+;; itself as the thread node underneath.  Scoped to the project
+;; (`reviewer--project-root') of the buffer the pane was opened from,
+;; captured once in `reviewer-treemacs--project-root'; opening it from
+;; a buffer with no project falls back to every annotated buffer,
+;; unscoped.  Rebuilt fresh -- same as toggling the pane closed and
+;; back open, expand/collapse state and all -- on
+;; `reviewer-annotation-change-hook', so an annotation created,
+;; edited, replied to, or deleted anywhere, not just through this
+;; pane's own commands, shows up here without waiting on a manual
 ;; toggle.
 ;;
 ;; Not loaded by `reviewer.el' itself -- treemacs is a much heavier
@@ -136,6 +140,12 @@ object rather than a fixed name, e.g. via `get-buffer-window'.")
           (generate-new-buffer reviewer-treemacs--detail-buffer-default-name)))
   reviewer-treemacs--detail-buf)
 
+(defvar reviewer-treemacs--project-root nil
+  "Project root the tree pane is scoped to, captured when it's opened.
+Nil means show annotations from every live buffer, unscoped -- what
+`reviewer-treemacs--open' falls back to when `reviewer--project-root'
+finds no project for the buffer it's opened from.")
+
 ;; --- annotation data -------------------------------------------------------
 ;; The tree's data is (LABEL . OVERLAYS) tuples, one per distinct LABEL
 ;; with at least one annotation: LABEL from `reviewer-treemacs--buffer-label',
@@ -172,8 +182,11 @@ several magit buffers against the same repo and branch -- are merged
 into a single entry rather than colliding as separate tree nodes with
 the same key.  Sorted by LABEL for a stable tree order across
 rebuilds."
-  (let (files)
-    (dolist (buf (buffer-list))
+  (let ((buffers (if reviewer-treemacs--project-root
+                      (reviewer--project-buffers reviewer-treemacs--project-root)
+                    (buffer-list)))
+        files)
+    (dolist (buf buffers)
       (with-current-buffer buf
         (when-let* ((annotations (reviewer-all-annotations)))
           (let* ((label (reviewer-treemacs--buffer-label))
@@ -652,6 +665,7 @@ buffer since a refresh may run without any of them selected."
 
 (defun reviewer-treemacs--open ()
   "Open the locked tree/detail pane pair, tree above detail."
+  (setq reviewer-treemacs--project-root (reviewer--project-root))
   (let* ((side reviewer-treemacs-side)
          (width (reviewer-treemacs--resolved-width))
          (tree-window (display-buffer-in-side-window
