@@ -251,7 +251,12 @@ A full sample configuration, documenting each of these:
 ~reviewer-mode~ (create, edit, reply to, and show annotations), the
 org renderer (single-buffer and project-wide), and the treemacs
 tree/detail view are all in place. There's no persistence across
-sessions yet.
+sessions yet, so killing a buffer loses its annotations for good --
+render them first (see above) if you want to keep them. Killing a
+buffer with annotations prompts for confirmation so this doesn't
+happen by accident; this matters most for buffers with no file to
+begin with, e.g. a magit diff or revision buffer, since those have no
+"unsaved changes" warning of their own to fall back on.
 
 * Comparison to related packages
 

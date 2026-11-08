@@ -822,5 +822,21 @@ until this is turned on, e.g. via `setopt' or a `:custom' entry in
 (define-globalized-minor-mode reviewer-global-mode reviewer-mode reviewer-mode
   :group 'reviewer)
 
+(defun reviewer--kill-buffer-query ()
+  "Ask before killing a buffer whose annotations would be lost.
+Annotations are overlays with no persistence yet (see Commentary at
+the top of this file), and don't mark the buffer modified, so the
+usual \"buffer modified; kill anyway?\" prompt never fires for them --
+this is that same guard, for annotations instead of unsaved text.
+Matters most for buffers with no file to begin with, e.g. a magit
+diff or revision buffer, which have no \"unsaved changes\" concept at
+all and so otherwise close with no warning whatsoever."
+  (let ((annotations (and reviewer-mode (reviewer-all-annotations))))
+    (or (not annotations)
+        (y-or-n-p (format "Buffer has %d annotation%s that will be lost. Kill anyway? "
+                           (length annotations) (if (= (length annotations) 1) "" "s"))))))
+
+(add-hook 'kill-buffer-query-functions #'reviewer--kill-buffer-query)
+
 (provide 'reviewer)
 ;;; reviewer.el ends here
