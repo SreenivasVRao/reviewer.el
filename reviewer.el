@@ -304,6 +304,8 @@ See `reviewer--edit-target' for the shapes TARGET can take."
 (declare-function magit-get-current-branch "magit-git")
 (declare-function magit-rev-parse "magit-git")
 (declare-function projectile-project-root "projectile")
+(declare-function agent-shell-shell-buffer "agent-shell")
+(declare-function agent-shell-insert "agent-shell")
 
 (defconst reviewer--posframe-buffer " *reviewer-posframe*"
   "Buffer used by posframe to display annotation text.")
@@ -697,6 +699,42 @@ Unlike `reviewer-render', the render buffer is created but not displayed."
     (kill-new path)
     (message "Copied as %s" path)))
 
+(defun reviewer--file-mention (path)
+  "Return PATH as an `agent-shell' \"@\" file mention.
+Quoted when PATH has whitespace, matching the quoting rule
+`agent-shell' itself uses so its parser reads the mention back as one
+path rather than stopping at the first space."
+  (if (string-match-p "[[:space:]]" path)
+      (format "@\"%s\"" path)
+    (concat "@" path)))
+
+(defun reviewer-dispatch-to-agent-shell ()
+  "Send this buffer's rendered annotations to an `agent-shell' session as a file.
+Resolves (or creates) an `agent-shell' session for the current
+project via `agent-shell-shell-buffer', renders the same content
+`reviewer-render' shows -- diff/file context plus every thread's full
+text -- to the /tmp/ org file `reviewer--render-to-buffer' already
+produces, then inserts an `@'-mention of that file into the session's
+prompt, which `agent-shell' resolves into a real file attachment
+(same mechanism as `agent-shell-send-file') rather than pasting the
+content inline. Left for the user to review and send -- not
+auto-submitted, since `agent-shell-viewport--show-buffer' rejects
+`:submit' outright when `agent-shell-prefer-viewport-interaction' is
+set, and inserting without submitting behaves the same in both
+viewport and plain shell buffers.
+
+Signals a `user-error' if `agent-shell' isn't installed.
+
+TODO: support dispatching to other agent-session backends once
+`agent-shell' isn't the only one wired up."
+  (interactive)
+  (unless (require 'agent-shell nil t)
+    (user-error "agent-shell not found -- see https://github.com/xenodium/agent-shell"))
+  (let* ((out (reviewer--render-to-buffer))
+         (path (buffer-local-value 'reviewer--render-path out))
+         (shell-buffer (agent-shell-shell-buffer)))
+    (agent-shell-insert :text (reviewer--file-mention path) :shell-buffer shell-buffer)))
+
 (defun reviewer-render-project ()
   "Render annotations across the current project as an org file in /tmp/.
 See `reviewer--project-root' for how the project is found."
@@ -730,6 +768,7 @@ See `reviewer--project-root' for how the project is found."
     (define-key map (kbd "s") #'reviewer-show-annotation-at-point)
     (define-key map (kbd "e") #'reviewer-yank-render-file-name)
     (define-key map (kbd "y") #'reviewer-yank-render)
+    (define-key map (kbd "d") #'reviewer-dispatch-to-agent-shell)
     (define-key map (kbd "P") #'reviewer-render-project)
     (define-key map (kbd "E") #'reviewer-yank-render-project-file-name)
     (define-key map (kbd "Y") #'reviewer-yank-render-project)
@@ -756,7 +795,8 @@ bound to `reviewer-transient' instead.")
    ["buffer"
     ("r" "show all annotations"       reviewer-render)
     ("y" "copy annotations"           reviewer-yank-render)
-    ("e" "export annotations as file" reviewer-yank-render-file-name)]
+    ("e" "export annotations as file" reviewer-yank-render-file-name)
+    ("d" "dispatch to agent"    reviewer-dispatch-to-agent-shell)]
    ["project"
     ("P" "show all annotations"       reviewer-render-project)
     ("Y" "copy annotations"           reviewer-yank-render-project)
