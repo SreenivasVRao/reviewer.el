@@ -482,6 +482,12 @@ explicitly."
   (or (bound-and-true-p magit-buffer-revision-hash)
       (bound-and-true-p magit-buffer-revision)))
 
+(defun reviewer--magit-commit-subject (commit)
+  "Return COMMIT's one-line subject, or nil if it can't be found."
+  (and commit (fboundp 'magit-rev-format)
+       (let ((subject (string-trim (or (magit-rev-format "%s" commit) ""))))
+         (and (not (string-empty-p subject)) subject))))
+
 (defun reviewer--magit-branch ()
   "Return the current branch, or nil if HEAD is detached."
   (and (fboundp 'magit-get-current-branch) (magit-get-current-branch)))
@@ -614,6 +620,7 @@ no annotations."
          (branch  (and magit-p (reviewer--magit-branch)))
          (head    (and magit-p (reviewer--magit-head)))
          (commit  (and magit-p (reviewer--magit-commit)))
+         (subject (and commit (reviewer--magit-commit-subject commit)))
          (file    (reviewer--buffer-label))
          (dir     default-directory)
          (lang    (reviewer--org-lang))
@@ -637,7 +644,9 @@ no annotations."
       (when repo (insert (format "#+REPO: %s\n" repo)))
       (when branch (insert (format "#+BRANCH: %s\n" branch)))
       (when head (insert (format "#+HEAD: %s\n" head)))
-      (when commit (insert (format "#+COMMIT: %s\n" commit)))
+      (when commit
+        (insert (format "#+COMMIT: %s%s\n" commit
+                         (if subject (format " %s" subject) ""))))
       (insert "\n")
       (reviewer--insert-entries entries lang 1)
       (setq reviewer--render-path (reviewer--render-file file))
@@ -667,11 +676,19 @@ buffer with no file, e.g. a magit diff -- its `default-directory' is."
 
 (defun reviewer--project-buffer-heading ()
   "Return this buffer's `* ...' heading label for the project-wide render.
-Its file path if it has one; otherwise \"buffer:<name>\" -- e.g. for a
-magit diff or a scratch buffer -- so a project export's headings, file
-paths and buffer names mixed together, can still tell the two apart at
-a glance."
-  (or buffer-file-name (format "buffer:%s" (buffer-name))))
+Its file path if it has one; for a magit-revision buffer instead,
+\"<repo>@<commit> <subject>\" -- so annotations made on different
+commits of the same file stay distinguishable, where the single-buffer
+render's #+COMMIT header can't help since one project render covers
+many buffers/commits at once.  Anything else -- e.g. a scratch buffer
+-- falls back to \"buffer:<name>\"."
+  (let ((commit (and (derived-mode-p 'magit-mode) (reviewer--magit-commit))))
+    (cond
+     (buffer-file-name buffer-file-name)
+     (commit (let ((subject (reviewer--magit-commit-subject commit)))
+               (if subject (format "%s %s" (reviewer--buffer-label) subject)
+                 (reviewer--buffer-label))))
+     (t (format "buffer:%s" (buffer-name))))))
 
 (defun reviewer--render-project-to-buffer ()
   "Render every annotated buffer under the current project as one org buffer.
