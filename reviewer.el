@@ -14,7 +14,8 @@
 ;; annotation under point if one already exists; clearing the text
 ;; deletes it.  C-c r l does the same but defaults to the whole
 ;; current line instead of the word at point.  C-c r R adds a reply to
-;; the thread at point instead of replacing the note.
+;; the thread at point instead of replacing the note.  C-c r n / C-c r
+;; p move point to the next / previous annotation in the buffer.
 ;;
 ;; Annotations are overlays, session-local only -- no persistence yet.
 ;; The data itself is just a buffer position range plus a note, author,
@@ -437,6 +438,26 @@ pre-scroll geometry instead of where point ends up."
     (reviewer--display-annotation (reviewer--annotation-content ov))
     (add-hook 'pre-command-hook #'reviewer--hide-annotation-display-once nil t)))
 
+(defun reviewer-next-annotation ()
+  "Move point to the next annotation in the buffer and show it."
+  (interactive)
+  (let ((ov (seq-find (lambda (ov) (> (overlay-start ov) (point)))
+                       (reviewer-all-annotations))))
+    (unless ov
+      (user-error "No next annotation"))
+    (goto-char (overlay-start ov))
+    (reviewer-show-annotation-at-point)))
+
+(defun reviewer-previous-annotation ()
+  "Move point to the previous annotation in the buffer and show it."
+  (interactive)
+  (let ((ov (car (last (seq-filter (lambda (ov) (< (overlay-start ov) (point)))
+                                    (reviewer-all-annotations))))))
+    (unless ov
+      (user-error "No previous annotation"))
+    (goto-char (overlay-start ov))
+    (reviewer-show-annotation-at-point)))
+
 (defun reviewer--org-lang ()
   "Best-effort org src-block language tag for the current buffer.
 Derived by stripping \"-mode\" off `major-mode', which also happens to
@@ -779,6 +800,8 @@ See `reviewer--project-root' for how the project is found."
     (define-key map (kbd "a") #'reviewer-annotate)
     (define-key map (kbd "l") #'reviewer-annotate-line)
     (define-key map (kbd "R") #'reviewer-reply-to-annotation)
+    (define-key map (kbd "n") #'reviewer-next-annotation)
+    (define-key map (kbd "p") #'reviewer-previous-annotation)
     (define-key map (kbd "r") #'reviewer-render)
     (define-key map (kbd "s") #'reviewer-show-annotation-at-point)
     (define-key map (kbd "e") #'reviewer-yank-render-file-name)
@@ -804,6 +827,8 @@ bound to `reviewer-transient' instead.")
     ("a" "annotate region"              reviewer-annotate)
     ("l" "annotate line"                reviewer-annotate-line)
     ("R" "reply to annotation"          reviewer-reply-to-annotation)
+    ("n" "next annotation"              reviewer-next-annotation)
+    ("p" "previous annotation"          reviewer-previous-annotation)
     ("s" "view annotation"              reviewer-show-annotation-at-point)
     ("x" "delete annotation"            reviewer-delete-annotation-at-point)
     ("k" "clear annotations in region"   reviewer-delete-region-annotations)
