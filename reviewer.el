@@ -823,17 +823,18 @@ bound to `reviewer-transient' instead.")
 (transient-define-prefix reviewer-transient ()
   "Transient menu for `reviewer-mode' commands."
   ["reviewer-mode\n"
-   ["review"
-    ("a" "annotate region"              reviewer-annotate)
-    ("l" "annotate line"                reviewer-annotate-line)
-    ("R" "reply to annotation"          reviewer-reply-to-annotation)
-    ("n" "next annotation"              reviewer-next-annotation)
-    ("p" "previous annotation"          reviewer-previous-annotation)
-    ("s" "view annotation"              reviewer-show-annotation-at-point)
-    ("x" "delete annotation"            reviewer-delete-annotation-at-point)
+   ["annotate"
+    ("a" "annotate region"               reviewer-annotate)
+    ("l" "annotate line"                 reviewer-annotate-line)
+    ("R" "reply to annotation"           reviewer-reply-to-annotation)
+    ("x" "delete annotation"             reviewer-delete-annotation-at-point)
     ("k" "clear annotations in region"   reviewer-delete-region-annotations)
     ("c" "clear all annotations in file" reviewer-clear-annotations)]
-   ["buffer"
+   ["navigate"
+    ("n" "next annotation"     reviewer-next-annotation)
+    ("p" "previous annotation" reviewer-previous-annotation)
+    ("s" "view annotation"     reviewer-show-annotation-at-point)]]
+  [["buffer"
     ("r" "show all annotations"       reviewer-render)
     ("y" "copy annotations"           reviewer-yank-render)
     ("e" "export annotations as file" reviewer-yank-render-file-name)
