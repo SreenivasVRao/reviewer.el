@@ -12,8 +12,9 @@
 ;; diff) without changing its content.  C-c r a creates an annotation
 ;; on the active region (or the word at point), and edits the
 ;; annotation under point if one already exists; clearing the text
-;; deletes it.  C-c r R adds a reply to the thread at point instead of
-;; replacing the note.
+;; deletes it.  C-c r l does the same but defaults to the whole
+;; current line instead of the word at point.  C-c r R adds a reply to
+;; the thread at point instead of replacing the note.
 ;;
 ;; Annotations are overlays, session-local only -- no persistence yet.
 ;; The data itself is just a buffer position range plus a note, author,
@@ -229,6 +230,19 @@ See `reviewer--edit-target' for the shapes TARGET can take."
     (if existing
         (reviewer--edit-annotation existing)
       (reviewer--create-annotation))))
+
+(defun reviewer-annotate-line ()
+  "Create an annotation on the current line, or edit the one at point.
+Like `reviewer-annotate', but defaults to the whole line instead of
+the word at point when there's no active region."
+  (interactive)
+  (let ((existing (reviewer--annotation-at (point))))
+    (cond
+     (existing (reviewer--edit-annotation existing))
+     ((use-region-p) (reviewer--create-annotation))
+     (t (reviewer--open-edit-buffer
+         (list (current-buffer) (line-beginning-position) (line-end-position))
+         nil)))))
 
 (defun reviewer-reply-to-annotation ()
   "Add a reply to the annotation thread at point."
@@ -763,6 +777,7 @@ See `reviewer--project-root' for how the project is found."
 (defvar reviewer-command-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "a") #'reviewer-annotate)
+    (define-key map (kbd "l") #'reviewer-annotate-line)
     (define-key map (kbd "R") #'reviewer-reply-to-annotation)
     (define-key map (kbd "r") #'reviewer-render)
     (define-key map (kbd "s") #'reviewer-show-annotation-at-point)
@@ -787,6 +802,7 @@ bound to `reviewer-transient' instead.")
   ["reviewer-mode\n"
    ["review"
     ("a" "annotate region"              reviewer-annotate)
+    ("l" "annotate line"                reviewer-annotate-line)
     ("R" "reply to annotation"          reviewer-reply-to-annotation)
     ("s" "view annotation"              reviewer-show-annotation-at-point)
     ("x" "delete annotation"            reviewer-delete-annotation-at-point)
