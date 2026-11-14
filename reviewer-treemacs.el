@@ -4,7 +4,7 @@
 
 ;; Author: Sreenivas Venkobarao
 ;; URL: https://github.com/SreenivasVRao/reviewer.el
-;; Package-Requires: ((emacs "29.1") (treemacs "3.0") (reviewer "0"))
+;; Package-Requires: ((emacs "29.1") (treemacs "3.0"))
 
 ;;; Commentary:
 
